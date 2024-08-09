@@ -8,5 +8,5 @@ target_include_directories(disassembler PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/inc
 
 target_sources(disassembler PRIVATE
 	src/disassembler/main.cpp
-	src/disassembler/Disassembler.cpp
+	src/disassembler/disassembler.cpp
 )

@@ -1,4 +1,5 @@
-#include <Disassembler.hpp>
+#include "disassembler.hpp"
+
 #include <cstdint>
 #include <iostream>
 #include <string>
@@ -18,9 +19,6 @@ std::vector<std::string> parse_args(int32_t argc, char **argv) {
 
 int main(int argc, char **argv) {
   std::vector<std::string> args = parse_args(argc, argv);
-  for (const auto &arg : args) {
-    std::cout << arg << std::endl;
-  }
 
   for (std::size_t i{}; i < args.size(); i++) {
     auto current_arg{args.at(i)};
@@ -29,13 +27,14 @@ int main(int argc, char **argv) {
         if (current_arg.at(j) == '-') {
           j++;
           if (current_arg.substr(j) == "help") {
-            Disassembler::display_help_msg();
+            disassembler::display_help_msg();
           }
         } else if (current_arg.substr(j) == "h") {
-          Disassembler::display_help_msg();
+          disassembler::display_help_msg();
         }
       }
     }
   }
+
   return 0;
 }
