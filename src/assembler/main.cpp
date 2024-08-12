@@ -68,11 +68,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  if (!output_file.empty() && !input_file.empty()) {
-    assembler::assemble(input_file, output_file);
-  } else if (output_file.empty() && !input_file.empty()) {
-    assembler::assemble(input_file);
-  }
+  assembler::assemble(input_file, output_file);
 
   return EXIT_SUCCESS;
 }
