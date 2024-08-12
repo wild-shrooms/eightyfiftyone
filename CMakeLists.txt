@@ -4,8 +4,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(eightyfiftyone)
 
 add_executable(8051-disassembler)
-target_include_directories(disassembler PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_sources(disassembler PRIVATE
+target_include_directories(8051-disassembler PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_sources(8051-disassembler PRIVATE
 	src/disassembler/main.cpp
 	src/disassembler/disassembler.cpp
 )
