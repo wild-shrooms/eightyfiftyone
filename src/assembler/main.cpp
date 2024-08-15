@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <iostream>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -68,7 +69,12 @@ int main(int argc, char **argv) {
     }
   }
 
-  assembler::assemble(input_file, output_file);
+  try {
+    assembler::assemble(input_file, output_file);
+  } catch (const std::exception &e) {
+    std::cerr << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }
