@@ -1,1 +1,1 @@
-mov A, #51H
+mov A, R0 

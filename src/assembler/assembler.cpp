@@ -1,6 +1,7 @@
 /* https://www.win.tue.nl/~aeb/comp/8051/set8051.html#51mov */
 
 #include "assembler/assembler.hpp"
+#include <algorithm>
 #include <format>
 #include <fstream>
 #include <iostream>
@@ -226,7 +227,7 @@ enum InstructionSet {
   DJNZ_R5_REL_ADDR,
   DJNZ_R6_REL_ADDR,
   DJNZ_R7_REL_ADDR,
-  MOVX_INDIRECT_DPTR_A,
+  MOVX_A_INDIRECT_DPTR,
   AJMP_PAGE7,
   MOVX_A_INDIRECT_R0,
   MOVX_A_INDIRECT_R1,
@@ -276,9 +277,61 @@ std::vector<std::string> tokenize(const std::string &source) {
 
   return tokens;
 }
+
+std::string handle_id(const std::string &s, size_t &idx) {
+  std::string id{};
+  for (; idx < s.size(); idx++) {
+    if (s.at(idx) == ',' || isspace(s.at(idx))) {
+      break;
+    }
+    id.append(1, s.at(idx));
+  }
+  return id;
+}
+
+std::string handle_digit(const std::string &s, size_t &idx) {
+  std::string value{};
+  for (; idx < s.size(); idx++) {
+    if (!isdigit(s.at(idx)) || isspace(s.at(idx))) {
+      break;
+    }
+    value.append(1, s.at(idx));
+  }
+
+  return value;
+}
+
+std::string handle_literal(const std::string &s, size_t &idx) {
+  std::string literal{};
+  literal.append(1, s.at(idx++));
+  for (; idx < s.size(); idx++) {
+    if (!isdigit(s.at(idx))) {
+      if (s.at(idx) == 'h' || s.at(idx) == 'b') {
+        literal.append(1, s.at(idx));
+      }
+      break;
+    }
+    literal.append(1, s.at(idx));
+  }
+
+  return literal;
+}
+
 } // namespace
 
 namespace assembler {
+struct Instruction {
+  std::string op{};
+  std::string first{};
+  std::string second{};
+  std::string third{};
+
+  std::string str() {
+    return std::format("op: '{}', 1: '{}', 2: '{}', 3: '{}'", op, first, second,
+                       third);
+  }
+};
+
 void display_help_message() { std::cout << help_message << std::endl; }
 
 void assemble(const std::filesystem::path &in,
@@ -297,12 +350,90 @@ void assemble(const std::filesystem::path &in,
         std::format("'{}' does not exist.", input_file_path.c_str()));
   }
 
+  std::vector<uint8_t> binary_output{};
+
   std::ifstream input_file{input_file_path};
-  for (std::string line{}; std::getline(input_file, line);) {
-    std::vector<std::string> tokens = tokenize(line);
-    for (const auto &token : tokens) {
-      std::cout << token << std::endl;
+  size_t line_number{1};
+  for (std::string line{}; std::getline(input_file, line); line_number++) {
+    std::transform(line.begin(), line.end(), line.begin(), tolower);
+    Instruction instruction{};
+    for (size_t i{}; i < line.size(); i++) {
+      if (isalpha(line.at(i))) {
+        if (instruction.op.empty()) {
+          instruction.op = handle_id(line, i);
+        } else if (instruction.first.empty()) {
+          instruction.first = handle_id(line, i);
+        } else if (instruction.second.empty()) {
+          instruction.second = handle_id(line, i);
+        } else if (instruction.third.empty()) {
+          instruction.third = handle_id(line, i);
+        }
+      } else if (isdigit(line.at(i))) {
+        if (instruction.first.empty()) {
+          instruction.first = handle_digit(line, i);
+        } else if (instruction.second.empty()) {
+          instruction.second = handle_digit(line, i);
+        } else if (instruction.third.empty()) {
+          instruction.second = handle_digit(line, i);
+        }
+      } else if (line.at(i) == '#') {
+        if (instruction.first.empty()) {
+          throw std::runtime_error(
+              std::format("{}: ({}:{}), Expected register or memory address.",
+                          in.c_str(), line_number, i));
+        }
+        if (instruction.second.empty()) {
+          instruction.second = handle_literal(line, i);
+        } else if (instruction.third.empty()) {
+          instruction.second = handle_literal(line, i);
+        }
+      }
     }
+
+    // std::cout << instruction.str() << std::endl;
+    // exit(7);
+
+    if (instruction.op == "mov") {
+      if (instruction.first == "a") {
+        if (instruction.second.at(0) == '#') {
+          binary_output.push_back(MOV_A_DATA);
+          instruction.second.erase(instruction.second.begin());
+          char suffix = *(instruction.second.end() - 1);
+          uint8_t value{};
+          if (isalpha(suffix)) {
+            instruction.second.pop_back();
+            if (suffix == 'h') {
+              value = std::stoull(instruction.second, 0, 16);
+            } else if (suffix == 'b') {
+              value = std::stoull(instruction.second, 0, 2);
+            }
+          } else {
+            value = std::stoull(instruction.second, 0, 10);
+          }
+          binary_output.push_back(value);
+        } else if (instruction.second == "r0") {
+          binary_output.push_back(MOV_A_R0);
+        } else if (instruction.second == "r1") {
+          binary_output.push_back(MOV_A_R1);
+        } else if (instruction.second == "r2") {
+          binary_output.push_back(MOV_A_R2);
+        } else if (instruction.second == "r3") {
+          binary_output.push_back(MOV_A_R3);
+        } else if (instruction.second == "r4") {
+          binary_output.push_back(MOV_A_R4);
+        } else if (instruction.second == "r5") {
+          binary_output.push_back(MOV_A_R5);
+        } else if (instruction.second == "r6") {
+          binary_output.push_back(MOV_A_R6);
+        } else if (instruction.second == "r7") {
+          binary_output.push_back(MOV_A_R7);
+        }
+      }
+    }
+  }
+
+  for (auto instruction : binary_output) {
+    std::cout << std::hex << (int)(instruction) << std::endl;
   }
 }
 
